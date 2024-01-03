@@ -1,5 +1,5 @@
 import numpy as np
-from utils.bc_utils import read_bag
+from BC.utils.bc_utils import read_bag
 
 class SimpleReplayBuffer():
     def __init__(self, obs_dim:int, action_dim:int, max_buffer_size:int) -> None:
