@@ -22,9 +22,24 @@
 
 # print(msgs)
 
-from BC.utils.bc_utils import get_all_bag_files,whole_bag_to_messages
+# from BC.utils.bc_utils import get_all_bag_files,whole_bag_to_messages
 
-ls = get_all_bag_files()
-msgs = whole_bag_to_messages(ls)
-print(msgs[1])
+# ls = get_all_bag_files()
+# msgs = whole_bag_to_messages(ls)
+# print(msgs[1])
 
+
+# import numpy as np
+
+# size = 6
+# if isinstance(size,int):
+#     size = [size]
+# buffer = np.zeros((10,*size))
+# print(buffer)
+
+import torch
+
+# reward = torch.distributions.Normal(torch.tensor([1,1]), torch.tensor([2,3]))
+# logprob=reward.log_prob(torch.tensor([0,0]))
+# print(logprob.mean())
+print(len(torch.tensor([1,2,3,45,6])))

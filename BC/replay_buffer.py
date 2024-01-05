@@ -2,10 +2,14 @@ import numpy as np
 from BC.utils.bc_utils import read_bag
 
 class SimpleReplayBuffer():
-    def __init__(self, obs_dim:int, action_dim:int, max_buffer_size:int) -> None:
+    def __init__(self, obs_dim, action_dim, max_buffer_size:int) -> None:
         self._observartion_dim = obs_dim
         self._action_dim = action_dim
         self.max_buffer_size = max_buffer_size
+        if isinstance(obs_dim, int):
+            obs_dim = [obs_dim]
+        if isinstance(action_dim, int):
+            action_dim = [action_dim]
         self.observations = np.zeros((max_buffer_size,*self._observartion_dim),dtype=np.float)
         self.actions = np.zeros((max_buffer_size, *self._action_dim),dtype=np.float)
         self._top = 0

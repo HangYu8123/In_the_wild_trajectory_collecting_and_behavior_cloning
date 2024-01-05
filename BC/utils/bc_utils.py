@@ -2,6 +2,7 @@ import rospy
 import rosbag
 from sensor_msgs.msg import JointState
 import os
+import torch
 
 
 def read_bag(bagdir):
@@ -44,3 +45,9 @@ def whole_bag_to_messages(bag_file_list):
         messages = read_bag(bag_file_list[i])
         messages_list.append(messages)
     return messages_list
+
+def device():
+    if torch.cuda.is_available():
+        return "cuda"
+    else:
+        print("WARNING: CUDA not available, running on CPU instead!")
