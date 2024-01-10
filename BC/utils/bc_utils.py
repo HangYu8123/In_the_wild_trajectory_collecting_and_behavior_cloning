@@ -46,6 +46,22 @@ def whole_bag_to_messages(bag_file_list):
         messages_list.append(messages)
     return messages_list
 
+# read k trajectories to buffers, if available trajectory is less than k, read them repeatly
+# buffer mus be k length
+def read_one_trajectory_to_each_buffer(k ,buffers, message_list):
+    top = 0
+    for i in range(k):
+        # print("i:{}".format(i))
+        trajectory = message_list[top]
+        buffer = buffers[i]
+        for j in range(len(trajectory)):
+            obs = list(trajectory[j].position[:6])
+            action = list(trajectory[j].effort[:6])
+            buffer.add_sample(obs,action)
+        top = (top + 1) % len(message_list)
+    
+
+
 def device():
     if torch.cuda.is_available():
         return "cuda"

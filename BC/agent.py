@@ -12,12 +12,12 @@ class BCND_Trainer():
             self,
             obs_dim,
             action_dim,
+            max_buffer_size,
             batch_size,
             training_horizon,
             learning_rate:float,
             num_networks:int,
-            network_config:dict,
-            
+            network_config:dict     
             ) -> None:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -26,13 +26,23 @@ class BCND_Trainer():
         self.batch_size = batch_size  
         self.num_policies = num_networks 
         self.lr = learning_rate   
+        self.training_horizon = training_horizon
+        self.max_buffer_size = max_buffer_size
         # flatten to a number if in_dim or action_dim is high-dimensional 
         if not isinstance(obs_dim, int):
             self.obs_dim = np.prod(obs_dim)
         if not isinstance(action_dim, int):
             self.action_dim = np.prod(action_dim)
 
-        self.replay_buffer = SimpleReplayBuffer()
+        self.buffers = []
+        for i in range(self.num_policies):
+            self.buffers.append(SimpleReplayBuffer(
+                self.obs_dim,
+                self.action_dim, 
+                self.max_buffer_size))
+
+
+
         self.optimizer = torch.optim.Adam
         # self.policy = BCND_network(self.obs_dim, self.action_dim, self.hidden_dim, self.hidden_layers)
         # self.policy.to(DEVICE)
@@ -43,25 +53,25 @@ class BCND_Trainer():
         self.old_policies = []
         # initialize old policies as random networks
         for _ in range(num_networks):
-            network_k = BCND_network(self.obs_dim, self.action_dim, self.hidden_dim, self.hidden_layers)
+            network_k = BCND_network(self.obs_dim, self.action_dim, self.hidden_dim, self.hidden_layers).to(DEVICE)
             self.old_policies.append(network_k)
 
-            # TODO:add function to load dataset
 
 
     # BCND reward from old policies and sampled experiences
-    def reward(self, observations, actions:np.ndarray):
+    def reward(self, observations, actions:torch):
         rewards = []
         actions_tensor = torch.tensor(actions).to(DEVICE)
         for i in range(self.num_policies):
-            reward_k_mean, reward_k_std:torch.Tensor = self.old_policies[i](observations)
+            reward_k_mean, reward_k_std = self.old_policies[i](observations)
             reward = torch.distributions.Normal(reward_k_mean, reward_k_std)
-            assert actions_tensor.size == reward_k_mean.size
-            log_prob_old:torch.Tensor = -reward.log_prob(actions_tensor)
+            assert actions_tensor.size() == reward_k_mean.size()
+            log_prob_old:torch.Tensor = reward.log_prob(actions_tensor)
             prob_old = log_prob_old.exp()
             rewards.append(prob_old)
         reward_tensor =torch.stack(rewards)
         reward_mean = reward_tensor.mean(dim=0,keepdim=False)
+        # print("reward_mean: {}\n".format(reward_mean))
         return reward_mean.detach()
     
 
@@ -70,24 +80,64 @@ class BCND_Trainer():
 
 
 
-    def run_batch(self, policy:BCND_network):
-        batch = self.replay_buffer.random_sample(self.batch_size)
+    def run_batch(self, policy:BCND_network, buffer:SimpleReplayBuffer):
+        # TODO: modify to K replay buffers
+        batch = buffer.random_sample(self.batch_size)
         observations:np.ndarray = batch["observations"]
         actions = batch["actions"]
         assert np.size(observations, axis=1) == self.obs_dim, "ERROR: Observations from replay buffer have wrong dimension!\n"
         assert np.size(actions, axis = 1) == self.action_dim, "ERROR: Actions from replay buffer have wrong dimension!\n"
-        observations = torch.tensor(observations).to(DEVICE)
-        actions = torch.tensor(actions).to(DEVICE)
-        predicted_action_mean, predicted_action_std:torch.Tensor = policy(observations)
+        observations = torch.from_numpy(observations).float().to(DEVICE)
+        actions_tensor = torch.tensor(actions).to(DEVICE)
+        # tst_obs = torch.tensor(np.ones((100,6),dtype=float)*100).float().to(DEVICE)
+        predicted_action_mean, predicted_action_std = policy(observations)
+        # print("means:{}\n".format(predicted_action_mean))
+        # print("stds:{}\n".format(predicted_action_std)) 
+        
         policy_dist = torch.distributions.Normal(predicted_action_mean,predicted_action_std)
-        assert actions.size == predicted_action_mean.size
-        log_prob_action_n = policy_dist.log_prob(actions)
+        # print(list(actions_tensor.size()),'\n')
+        # print(list(predicted_action_mean.size()),
+            # '\n')
+        assert actions_tensor.size() == predicted_action_mean.size()
+        log_prob_action_n = policy_dist.log_prob(actions_tensor)
         rewards = self.reward(observations, actions)
-        loss = -log_prob_action_n * rewards
+        # print("prob:", log_prob_action_n)
+        # print("prob_size:",log_prob_action_n.size())
+        # print("reward_size:",rewards.size())
+        loss = -(log_prob_action_n * rewards)
+        loss = loss.mean()        
+        print("loss:",loss)
+
         optimizer = self.optimizer(policy.parameters(), self.lr)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+    def update_old_policies(self):
+        self.old_policies = self.policies
+
+
+    
+    def create_policy(self):
+        # TODO: use other function to make sure policy list num is correct
+        policy = BCND_network(self.obs_dim, self.action_dim, self.hidden_dim, self.hidden_layers).to(DEVICE)
+        self.policies.append(policy)
+        return policy
+
+        
+    def run_one_iterarion(self):
+        self.policies = []
+        for k in range(self.num_policies):
+            print("network:{}\n".format(k))
+            policy = self.create_policy()
+            buffer:SimpleReplayBuffer = self.buffers[k]
+            for l in range(self.training_horizon):
+                self.run_batch(policy, buffer)
+        self.update_old_policies()
+
+            
+    
+
 
 
 

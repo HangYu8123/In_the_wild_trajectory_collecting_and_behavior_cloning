@@ -22,11 +22,19 @@
 
 # print(msgs)
 
-# from BC.utils.bc_utils import get_all_bag_files,whole_bag_to_messages
+from BC.replay_buffer import SimpleReplayBuffer
+from BC.utils.bc_utils import get_all_bag_files,whole_bag_to_messages, read_one_trajectory_to_each_buffer
 
-# ls = get_all_bag_files()
-# msgs = whole_bag_to_messages(ls)
-# print(msgs[1])
+ls = get_all_bag_files()
+msgs = whole_bag_to_messages(ls)
+buffers = []
+for i in range(10):
+    # print(i)
+    buf =   SimpleReplayBuffer([6],[6],100)
+    buffers.append(buf)
+print(buffers[0])
+read_one_trajectory_to_each_buffer(10,buffers, msgs)
+print(buffers[0].random_sample(10))
 
 
 # import numpy as np
@@ -42,4 +50,4 @@ import torch
 # reward = torch.distributions.Normal(torch.tensor([1,1]), torch.tensor([2,3]))
 # logprob=reward.log_prob(torch.tensor([0,0]))
 # print(logprob.mean())
-print(len(torch.tensor([1,2,3,45,6])))
+# print(len(torch.tensor([1,2,3,45,6])))

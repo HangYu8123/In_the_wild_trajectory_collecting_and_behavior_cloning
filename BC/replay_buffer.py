@@ -1,15 +1,17 @@
 import numpy as np
-from BC.utils.bc_utils import read_bag
+from utils.bc_utils import read_bag
 
 class SimpleReplayBuffer():
     def __init__(self, obs_dim, action_dim, max_buffer_size:int) -> None:
-        self._observartion_dim = obs_dim
-        self._action_dim = action_dim
         self.max_buffer_size = max_buffer_size
         if isinstance(obs_dim, int):
             obs_dim = [obs_dim]
+            # obs_dim = list(obs_dim)
         if isinstance(action_dim, int):
-            action_dim = [action_dim]
+            action_dim = [action_dim]        
+        self._observartion_dim = obs_dim
+        self._action_dim = action_dim
+
         self.observations = np.zeros((max_buffer_size,*self._observartion_dim),dtype=np.float)
         self.actions = np.zeros((max_buffer_size, *self._action_dim),dtype=np.float)
         self._top = 0
@@ -26,6 +28,7 @@ class SimpleReplayBuffer():
     def add_sample(self, obs, action):
         self.observations[self._top] = obs
         self.actions[self._top] = action
+        self._advance()
 
     def _advance(self):
         self._top = (self._top+1) % self.max_buffer_size
@@ -41,7 +44,8 @@ class SimpleReplayBuffer():
             
 
     def random_sample(self, batch_size):
-        randnum = np.random.randint(0, self.max_buffer_size, batch_size)
+        # print(self._size)
+        randnum = np.random.randint(0, self._size, batch_size)
         batch = dict(
             observations = self.observations[randnum], 
             actions = self.actions[randnum]
