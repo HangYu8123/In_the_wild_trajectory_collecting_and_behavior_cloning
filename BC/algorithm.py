@@ -1,9 +1,10 @@
 from agent import BCND_Trainer
 from utils.bc_utils import get_all_bag_files,whole_bag_to_messages, read_one_trajectory_to_each_buffer
+from utils.save_model import save_model
+import os
 
 
-
-
+PATH = os.path.dirname(os.path.abspath(__file__))
 
 class BCND_algorithm():
     def __init__(self, 
@@ -35,6 +36,8 @@ class BCND_algorithm():
     def train(self):
         for _ in range(self.iteration_num):
             self.trainer.run_one_iterarion()
+        trained_networks = self.trainer.policies
+        save_model(trained_networks, PATH)
 
 
         
