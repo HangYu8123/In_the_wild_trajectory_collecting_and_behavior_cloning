@@ -13,6 +13,7 @@ network_config = dict(
     hidden_layer_dimension = 20,
     hidden_layer_numbers = 1
 )
+eval_freq = 30
 algo = BCND_algorithm(
     iter_num,
     obs_dim,
@@ -22,6 +23,7 @@ algo = BCND_algorithm(
     training_horizon,
     learning_rate, 
     num_networks, 
-    network_config
+    network_config,
+    eval_freq
 )
 algo.train()

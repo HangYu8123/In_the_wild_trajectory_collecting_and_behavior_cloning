@@ -17,8 +17,8 @@ class BCND_Trainer():
             training_horizon,
             learning_rate:float,
             num_networks:int,
-            network_config:dict     
-            ) -> None:
+            network_config:dict
+        ) -> None:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.hidden_dim = network_config["hidden_layer_dimension"]
@@ -28,6 +28,7 @@ class BCND_Trainer():
         self.lr = learning_rate   
         self.training_horizon = training_horizon
         self.max_buffer_size = max_buffer_size
+        self.eval_freq = eval_freq
         # flatten to a number if in_dim or action_dim is high-dimensional 
         if not isinstance(obs_dim, int):
             self.obs_dim = np.prod(obs_dim)
@@ -106,7 +107,7 @@ class BCND_Trainer():
         # print("reward_size:",rewards.size())
         loss = -(log_prob_action_n * rewards)
         loss = loss.mean()        
-        print("loss:",loss)
+        # print("loss:",loss)
 
         optimizer = self.optimizer(policy.parameters(), self.lr)
         optimizer.zero_grad()
@@ -134,6 +135,28 @@ class BCND_Trainer():
             for l in range(self.training_horizon):
                 self.run_batch(policy, buffer)
         self.update_old_policies()
+        
+
+    # evaluating policy performance to check whether training is going
+    def eval(self):
+        for policy in self.old_policies:
+            policy.eval()
+        buffer:SimpleReplayBuffer = self.buffers[0]
+        observations_whole = buffer.observations
+        # shift obs to get next obs, leave the last one as 0
+        next_obs = np.concatenate((observations_whole[1:],[0]))
+        next_obs_tensor = torch.tensor(next_obs).to(DEVICE)
+        actions_whole = buffer.actions
+        observations_whole_tensor = torch.tensor(observations_whole).to(DEVICE)
+        actions_whole_tensor = torch.tensor(actions_whole).to(DEVICE)
+        reward_predictions = self.reward(observations_whole_tensor, actions_whole_tensor)
+        creterion = torch.nn.MSELoss(reduction="sum")
+        loss:torch.Tensor = creterion(reward_predictions,next_obs)
+        loss_avg = loss/loss.size(0)
+        loss_avg = loss_avg.item()
+        print("average MSE loss over one trajectory:{}\n".format(loss_avg))
+
+
 
             
     

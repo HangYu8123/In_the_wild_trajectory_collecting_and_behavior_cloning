@@ -16,7 +16,8 @@ class BCND_algorithm():
             training_horizon,
             learning_rate:float,
             num_networks:int,
-            network_config:dict):
+            network_config:dict,
+            eval_freq:int):
         
         self.trainer = BCND_Trainer(obs_dim,
             action_dim,            
@@ -26,7 +27,7 @@ class BCND_algorithm():
             learning_rate,
             num_networks,
             network_config)
-        
+        self.eval_freq = eval_freq
         self.iteration_num = iterartion_num
         # load trajectory data to buffer
         ls = get_all_bag_files()
@@ -34,10 +35,13 @@ class BCND_algorithm():
         read_one_trajectory_to_each_buffer(num_networks,self.trainer.buffers, msgs)
 
     def train(self):
-        for _ in range(self.iteration_num):
+        for i in range(self.iteration_num):
             self.trainer.run_one_iterarion()
+            if i % self.eval_freq == 0:
+                self.trainer.eval()
         trained_networks = self.trainer.policies
         save_model(trained_networks, PATH)
+
 
 
         
